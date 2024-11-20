@@ -1,126 +1,63 @@
 // Analytics.js
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, Button } from 'react-native';
-import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Dimensions, Button, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import axios from 'axios';
+
+const PUBLIC_KEY = 'pk_test_51QH88qGo50WW5CWAncc5sz3B4TF5fh02kq8uB4glKbpjTqgxNyM4iHEFKPXHLITv1A2xycH5cilnRdwF2xyYdyUW00PTiWUl2F';
 
 const Analytics = () => {
+  const navigation = useNavigation();
+  const [reportTypes, setReportTypes] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const navigation = useNavigation(); // Inicializa o navigation
+  useEffect(() => {
+    const fetchReportTypes = async () => {
+      try {
+        const response = await axios.get('https://api.stripe.com/v1/reporting/report_types', {
+          headers: {
+            Authorization: `Bearer ${PUBLIC_KEY}`,
+          },
+        });
+
+        const data = response.data.data.map((report) => ({
+          id: report.id,
+          object: report.object,
+          dataAvailableEnd: new Date(report.data_available_end * 1000).toLocaleDateString(),
+          dataAvailableStart: new Date(report.data_available_start * 1000).toLocaleDateString(),
+          defaultColumns: report.default_columns.join(', '),
+        }));
+
+        setReportTypes(data);
+        setLoading(false);
+      } catch (error) {
+        console.error('Erro ao carregar tipos de relatórios:', error);
+        setLoading(false);
+      }
+    };
+
+    fetchReportTypes();
+  }, []);
 
   return (
     <ScrollView style={styles.container}>
-       <Button title="Voltar para Home" onPress={() => navigation.navigate('Home')} />
+      <Button title="Voltar para Home" onPress={() => navigation.navigate('Home')} />
 
-      {/* Gráfico de Revenue */}
-      <Text style={styles.chartTitle}>Receita</Text>
-      <LineChart
-        data={{
-          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-          datasets: [{ data: [5000, 7000, 8000, 6500, 7200, 8500] }],
-        }}
-        width={Dimensions.get('window').width - 32}
-        height={220}
-        yAxisLabel="R$"
-        chartConfig={{
-          backgroundColor: '#e0f2f1',
-          backgroundGradientFrom: '#ffffff',
-          backgroundGradientTo: '#f0f0f0',
-          decimalPlaces: 2,
-          color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-          labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-        }}
-        style={styles.chart}
-      />
+      <Text style={styles.header}>Relatórios Disponíveis</Text>
 
-      {/* Gráfico de Costs */}
-      <Text style={styles.chartTitle}>Custos</Text>
-      <BarChart
-        data={{
-          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-          datasets: [{ data: [3000, 3500, 3200, 4000, 4500, 4200] }],
-        }}
-        width={Dimensions.get('window').width - 32}
-        height={220}
-        yAxisLabel="R$"
-        chartConfig={{
-          backgroundColor: '#f0f0f0',
-          backgroundGradientFrom: '#ff8a80',
-          backgroundGradientTo: '#ff5252',
-          decimalPlaces: 2,
-          color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-          labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-        }}
-        style={styles.chart}
-      />
-
-      {/* Gráfico de Acquisition */}
-      <Text style={styles.chartTitle}>Aquisição</Text>
-      <PieChart
-        data={[
-          { name: 'Social Media', population: 35, color: '#3b5998', legendFontColor: '#7F7F7F', legendFontSize: 15 },
-          { name: 'Email Marketing', population: 25, color: '#ffa726', legendFontColor: '#7F7F7F', legendFontSize: 15 },
-          { name: 'Search Engine', population: 20, color: '#66bb6a', legendFontColor: '#7F7F7F', legendFontSize: 15 },
-          { name: 'Referral', population: 20, color: '#ef5350', legendFontColor: '#7F7F7F', legendFontSize: 15 },
-        ]}
-        width={Dimensions.get('window').width - 32}
-        height={220}
-        chartConfig={{
-          color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-          labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-        }}
-        accessor="population"
-        backgroundColor="transparent"
-        paddingLeft="15"
-        absolute
-        style={styles.chart}
-      />
-
-      {/* Gráfico de Monthly Profit */}
-      <Text style={styles.chartTitle}>Lucro Mensal</Text>
-      <LineChart
-        data={{
-          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-          datasets: [{ data: [2000, 3500, 4800, 2500, 2700, 4300] }],
-        }}
-        width={Dimensions.get('window').width - 32}
-        height={220}
-        yAxisLabel="R$"
-        chartConfig={{
-          backgroundColor: '#ffffff',
-          backgroundGradientFrom: '#e0f7fa',
-          backgroundGradientTo: '#80deea',
-          decimalPlaces: 2,
-          color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-          labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-        }}
-        style={styles.chart}
-      />
-
-      {/* Gráfico de Quarterly Revenue by Country */}
-      <Text style={styles.chartTitle}>Receita Trimestral por País</Text>
-      <BarChart
-        data={{
-          labels: ['Q1', 'Q2', 'Q3', 'Q4'],
-          datasets: [
-            { data: [8000, 8500, 9000, 9500], label: 'USA' },
-            { data: [6000, 6500, 7000, 7500], label: 'Brazil' },
-            { data: [4000, 4500, 5000, 5500], label: 'Canada' },
-          ],
-        }}
-        width={Dimensions.get('window').width - 32}
-        height={220}
-        yAxisLabel="R$"
-        chartConfig={{
-          backgroundColor: '#f5f5f5',
-          backgroundGradientFrom: '#dcedc8',
-          backgroundGradientTo: '#aed581',
-          decimalPlaces: 2,
-          color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-          labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-        }}
-        style={styles.chart}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color="#0000ff" style={{ marginTop: 20 }} />
+      ) : (
+        reportTypes.map((report) => (
+          <View key={report.id} style={styles.card}>
+            <Text style={styles.cardTitle}>ID: {report.id}</Text>
+            <Text style={styles.cardText}>Objeto: {report.object}</Text>
+            <Text style={styles.cardText}>Dados Disponíveis de: {report.dataAvailableStart}</Text>
+            <Text style={styles.cardText}>Dados Disponíveis até: {report.dataAvailableEnd}</Text>
+            <Text style={styles.cardText}>Colunas Padrão: {report.defaultColumns}</Text>
+          </View>
+        ))
+      )}
     </ScrollView>
   );
 };
@@ -128,8 +65,9 @@ const Analytics = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: '#f9f9f9' },
   header: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginVertical: 16 },
-  chartTitle: { fontSize: 18, fontWeight: 'bold', marginVertical: 10, textAlign: 'center' },
-  chart: { marginVertical: 8, borderRadius: 8 },
+  card: { backgroundColor: '#fff', padding: 16, borderRadius: 8, marginBottom: 16, elevation: 3 },
+  cardTitle: { fontSize: 18, fontWeight: 'bold' },
+  cardText: { fontSize: 16, marginTop: 4, color: '#333' },
 });
 
 export default Analytics;

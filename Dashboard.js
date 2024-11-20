@@ -1,130 +1,97 @@
 // Dashboard.js
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, Button } from 'react-native';
-import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
+import { View, Text, StyleSheet, ScrollView, Dimensions, Button, ActivityIndicator } from 'react-native';
+import { BarChart } from 'react-native-chart-kit';
 import axios from 'axios';
 import { useNavigation } from '@react-navigation/native';
 
+const PUBLIC_KEY = 'pk_test_51QH88qGo50WW5CWAncc5sz3B4TF5fh02kq8uB4glKbpjTqgxNyM4iHEFKPXHLITv1A2xycH5cilnRdwF2xyYdyUW00PTiWUl2F';
 
 const Dashboard = () => {
+  const navigation = useNavigation();
+  const [payouts, setPayouts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const navigation = useNavigation(); // Inicializa o navigation
-
-  const [revenue, setRevenue] = useState(0);
-  const [salesCount, setSalesCount] = useState(0);
-  const [highestPrice, setHighestPrice] = useState(0);
-
-  // Simulando uma chamada à API
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchPayouts = async () => {
       try {
-        const response = await axios.get('https://api.example.com/sales');
-        const data = response.data;
-        setRevenue(data.totalRevenue);
-        setSalesCount(data.totalSales);
-        setHighestPrice(data.highestPrice);
+        const response = await axios.get('https://api.stripe.com/v1/payouts', {
+          headers: {
+            Authorization: `Bearer ${PUBLIC_KEY}`,
+          },
+        });
+
+        const data = response.data.data.map((payout) => ({
+          id: payout.id,
+          amount: payout.amount / 100, // Convertendo para reais
+          arrival_date: new Date(payout.arrival_date * 1000).toLocaleDateString(),
+          created: new Date(payout.created * 1000).toLocaleDateString(),
+        }));
+
+        setPayouts(data);
+        setLoading(false);
       } catch (error) {
-        console.error(error);
+        console.error('Erro ao buscar dados da API Stripe:', error);
+        setLoading(false);
       }
     };
 
-    fetchData();
+    fetchPayouts();
   }, []);
 
   return (
     <ScrollView style={styles.container}>
-
       <Button title="Voltar para Home" onPress={() => navigation.navigate('Home')} />
 
+      <Text style={styles.chartTitle}>Resumo de Payouts</Text>
 
-      {/* Cartões de Resumo */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Faturamento</Text>
-        <Text style={styles.cardValue}>R$ {revenue}</Text>
+      {loading ? (
+        <ActivityIndicator size="large" color="#0000ff" />
+      ) : payouts.length > 0 ? (
+        <BarChart
+          data={{
+            labels: payouts.map((payout) => payout.arrival_date), // Datas de chegada
+            datasets: [{ data: payouts.map((payout) => payout.amount) }],
+          }}
+          width={Dimensions.get('window').width - 16}
+          height={220}
+          yAxisLabel="R$"
+          chartConfig={{
+            backgroundColor: '#e26a00',
+            backgroundGradientFrom: '#fb8c00',
+            backgroundGradientTo: '#ffa726',
+            decimalPlaces: 2,
+            color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+            labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+          }}
+          style={{ marginVertical: 8, borderRadius: 16 }}
+        />
+      ) : (
+        <Text style={styles.errorText}>Nenhum dado de payout disponível.</Text>
+      )}
+
+      {/* Detalhes dos Payouts */}
+      <View>
+        {payouts.map((payout) => (
+          <View key={payout.id} style={styles.card}>
+            <Text style={styles.cardTitle}>ID: {payout.id}</Text>
+            <Text style={styles.cardText}>Valor: R$ {payout.amount.toFixed(2)}</Text>
+            <Text style={styles.cardText}>Data de Chegada: {payout.arrival_date}</Text>
+            <Text style={styles.cardText}>Criado em: {payout.created}</Text>
+          </View>
+        ))}
       </View>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Quantidade de Vendas</Text>
-        <Text style={styles.cardValue}>{salesCount}</Text>
-      </View>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Maior Preço</Text>
-        <Text style={styles.cardValue}>R$ {highestPrice}</Text>
-      </View>
-
-      {/* Gráfico de Faturamento Mensal */}
-      <Text style={styles.chartTitle}>Faturamento Mensal</Text>
-      <BarChart
-        data={{
-          labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
-          datasets: [{ data: [5000, 6000, 8000, 7000, 9000, 10000] }],
-        }}
-        width={Dimensions.get('window').width - 16}
-        height={220}
-        yAxisLabel="R$"
-        chartConfig={{
-          backgroundColor: '#e26a00',
-          backgroundGradientFrom: '#fb8c00',
-          backgroundGradientTo: '#ffa726',
-          decimalPlaces: 2,
-          color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-          labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-        }}
-        style={{ marginVertical: 8, borderRadius: 16 }}
-      />
-
-      {/* Gráfico de Orders */}
-      <Text style={styles.chartTitle}>Pedidos Mensais</Text>
-      <BarChart
-        data={{
-          labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
-          datasets: [{ data: [300, 400, 500, 450, 700, 650] }],
-        }}
-        width={Dimensions.get('window').width - 16}
-        height={220}
-        yAxisLabel="Pedidos"
-        chartConfig={{
-          backgroundColor: '#022173',
-          backgroundGradientFrom: '#1e3c72',
-          backgroundGradientTo: '#2a5298',
-          decimalPlaces: 0,
-          color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-          labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-        }}
-        style={{ marginVertical: 8, borderRadius: 16 }}
-      />
-
-      {/* Gráfico de Produtos Mais Vendidos */}
-      <Text style={styles.chartTitle}>Produtos Mais Vendidos</Text>
-      <PieChart
-        data={[
-          { name: 'Produto A', sales: 600, color: '#3b5998', legendFontColor: '#7F7F7F', legendFontSize: 15 },
-          { name: 'Produto B', sales: 400, color: '#ffa726', legendFontColor: '#7F7F7F', legendFontSize: 15 },
-          { name: 'Produto C', sales: 300, color: '#66bb6a', legendFontColor: '#7F7F7F', legendFontSize: 15 },
-          { name: 'Produto D', sales: 200, color: '#ef5350', legendFontColor: '#7F7F7F', legendFontSize: 15 },
-        ]}
-        width={Dimensions.get('window').width - 16}
-        height={220}
-        chartConfig={{
-          color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-          labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-        }}
-        accessor="sales"
-        backgroundColor="transparent"
-        paddingLeft="15"
-        absolute
-        style={{ marginVertical: 8, borderRadius: 16 }}
-      />
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: '#f4f4f4' },
-  header: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginVertical: 16 },
-  card: { backgroundColor: '#fff', padding: 16, borderRadius: 8, marginBottom: 16, elevation: 3 },
-  cardTitle: { fontSize: 18, fontWeight: '500' },
-  cardValue: { fontSize: 24, fontWeight: 'bold', color: '#3b5998', marginTop: 4 },
   chartTitle: { fontSize: 18, fontWeight: 'bold', textAlign: 'center', marginVertical: 8 },
+  card: { backgroundColor: '#fff', padding: 16, borderRadius: 8, marginBottom: 16, elevation: 3 },
+  cardTitle: { fontSize: 18, fontWeight: 'bold' },
+  cardText: { fontSize: 16, marginTop: 4, color: '#333' },
+  errorText: { textAlign: 'center', color: 'red', fontSize: 16, marginVertical: 16 },
 });
 
 export default Dashboard;

@@ -1,41 +1,69 @@
 // NotificationsScreen.js
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, Button } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, Button, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import axios from 'axios';
 
+const PUBLIC_KEY = 'pk_test_51QH88qGo50WW5CWAncc5sz3B4TF5fh02kq8uB4glKbpjTqgxNyM4iHEFKPXHLITv1A2xycH5cilnRdwF2xyYdyUW00PTiWUl2F';
 
 const NotificationsScreen = () => {
+  const navigation = useNavigation();
+  const [webhookEndpoints, setWebhookEndpoints] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const navigation = useNavigation(); // Inicializa o navigation
+  useEffect(() => {
+    const fetchWebhookEndpoints = async () => {
+      try {
+        const response = await axios.get('https://api.stripe.com/v1/webhook_endpoints', {
+          headers: {
+            Authorization: `Bearer ${PUBLIC_KEY}`,
+          },
+        });
 
-  // Dados de notificações com status e tempo
-  const notifications = [
-    { id: '1', title: 'Calendario', time: '10:30 AM', status: 'concluído' },
-    { id: '2', title: 'Vendas', time: '11:00 AM', status: 'pedente' },
-    { id: '3', title: 'Recommendações', time: '12:15 PM', status: 'concluído' },
-    { id: '4', title: 'Usuarios', time: '1:30 PM', status: 'concluído' },
-    { id: '5', title: 'Monitoramento', time: '2:45 PM', status: 'pedente' },
-    { id: '6', title: 'Alertas', time: '3:00 PM', status: 'concluído' },
-  ];
+        const data = response.data.data.map((endpoint) => ({
+          id: endpoint.id,
+          object: endpoint.object,
+          created: new Date(endpoint.created * 1000).toLocaleDateString(),
+          description: endpoint.description || 'Sem descrição',
+          enabledEvents: endpoint.enabled_events.join(', '),
+        }));
+
+        setWebhookEndpoints(data);
+        setLoading(false);
+      } catch (error) {
+        console.error('Erro ao carregar endpoints do webhook:', error);
+        setLoading(false);
+      }
+    };
+
+    fetchWebhookEndpoints();
+  }, []);
 
   return (
     <View style={styles.container}>
-
       <Button title="Voltar para Home" onPress={() => navigation.navigate('Home')} />
 
-      <FlatList
-        data={notifications}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.notificationItem}>
-            <View style={[styles.statusIndicator, item.status === 'concluído' ? styles.completed : styles.pending]} />
-            <View style={styles.textContainer}>
-              <Text style={styles.notificationTitle}>{item.title}</Text>
-              <Text style={styles.notificationTime}>Time: {item.time}</Text>
+      <Text style={styles.header}>Endpoints de Webhook</Text>
+
+      {loading ? (
+        <ActivityIndicator size="large" color="#0000ff" style={{ marginTop: 20 }} />
+      ) : (
+        <FlatList
+          data={webhookEndpoints}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View style={styles.notificationItem}>
+              <View style={styles.textContainer}>
+                <Text style={styles.notificationTitle}>ID: {item.id}</Text>
+                <Text style={styles.notificationText}>Objeto: {item.object}</Text>
+                <Text style={styles.notificationText}>Criado em: {item.created}</Text>
+                <Text style={styles.notificationText}>Descrição: {item.description}</Text>
+                <Text style={styles.notificationText}>Eventos Ativados: {item.enabledEvents}</Text>
+              </View>
             </View>
-          </View>
-        )}
-      />
+          )}
+        />
+      )}
     </View>
   );
 };
@@ -43,13 +71,10 @@ const NotificationsScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: '#f9f9f9' },
   header: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 16 },
-  notificationItem: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#fff', borderRadius: 8, marginBottom: 8, elevation: 2 },
-  statusIndicator: { width: 12, height: 12, borderRadius: 6, marginRight: 10 },
-  completed: { backgroundColor: 'green' },
-  pending: { backgroundColor: 'red' },
+  notificationItem: { flexDirection: 'column', alignItems: 'flex-start', padding: 16, backgroundColor: '#fff', borderRadius: 8, marginBottom: 8, elevation: 2 },
   textContainer: { flex: 1 },
   notificationTitle: { fontSize: 16, fontWeight: 'bold' },
-  notificationTime: { fontSize: 14, color: '#555' },
+  notificationText: { fontSize: 14, color: '#555', marginTop: 4 },
 });
 
 export default NotificationsScreen;

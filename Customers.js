@@ -1,32 +1,55 @@
 // Customers.js
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Button } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Button, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import axios from 'axios';
+
+const PUBLIC_KEY = 'pk_test_51QH88qGo50WW5CWAncc5sz3B4TF5fh02kq8uB4glKbpjTqgxNyM4iHEFKPXHLITv1A2xycH5cilnRdwF2xyYdyUW00PTiWUl2F';
 
 const Customers = () => {
+  const navigation = useNavigation();
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const navigation = useNavigation(); // Hook para navegação
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const response = await axios.get('https://api.stripe.com/v1/customers', {
+          headers: {
+            Authorization: `Bearer ${PUBLIC_KEY}`,
+          },
+        });
 
-  // Lista de clientes simulada
-  const customerList = [
-    { id: '1', name: 'John Doe', email: 'john.doe@example.com', accountCreated: '2022-08-15', totalSpend: '$1,250.00', totalOrders: '45', photoUrl: 'https://via.placeholder.com/100' },
-    { id: '2', name: 'Jane Smith', email: 'jane.smith@example.com', accountCreated: '2021-05-10', totalSpend: '$980.00', totalOrders: '30', photoUrl: 'https://via.placeholder.com/100' },
-    { id: '3', name: 'Alice Brown', email: 'alice.brown@example.com', accountCreated: '2023-01-20', totalSpend: '$450.00', totalOrders: '15', photoUrl: 'https://via.placeholder.com/100' },
-  ];
+        // Formata os dados para exibição
+        const formattedCustomers = response.data.data.map((customer) => ({
+          id: customer.id,
+          name: customer.name || 'Sem Nome',
+          email: customer.email || 'Sem Email',
+          photoUrl: 'https://via.placeholder.com/100', // Placeholder para imagem
+        }));
 
-  // Estado para armazenar o cliente selecionado
+        setCustomers(formattedCustomers);
+        setLoading(false);
+      } catch (error) {
+        console.error('Erro ao buscar clientes:', error);
+        setLoading(false);
+      }
+    };
+
+    fetchCustomers();
+  }, []);
+
   const [selectedCustomer, setSelectedCustomer] = useState(null);
 
   return (
     <View style={styles.container}>
-
       <Button title="Voltar para Home" onPress={() => navigation.navigate('Home')} />
 
-
-      {/* Lista de Clientes */}
-      {selectedCustomer === null ? (
+      {loading ? (
+        <ActivityIndicator size="large" color="#0000ff" style={{ marginTop: 20 }} />
+      ) : selectedCustomer === null ? (
         <FlatList
-          data={customerList}
+          data={customers}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <TouchableOpacity style={styles.customerItem} onPress={() => setSelectedCustomer(item)}>
@@ -35,18 +58,15 @@ const Customers = () => {
           )}
         />
       ) : (
-        // Detalhes do Cliente Selecionado
         <View style={styles.detailsContainer}>
           <TouchableOpacity onPress={() => setSelectedCustomer(null)} style={styles.backButton}>
             <Text style={styles.backButtonText}>← Voltar à Lista</Text>
           </TouchableOpacity>
           <Image source={{ uri: selectedCustomer.photoUrl }} style={styles.userPhoto} />
           <View style={styles.infoContainer}>
+            <Text style={styles.infoText}>ID: {selectedCustomer.id}</Text>
             <Text style={styles.infoText}>Nome: {selectedCustomer.name}</Text>
             <Text style={styles.infoText}>Email: {selectedCustomer.email}</Text>
-            <Text style={styles.infoText}>Conta Criada: {selectedCustomer.accountCreated}</Text>
-            <Text style={styles.infoText}>Gasto Total: {selectedCustomer.totalSpend}</Text>
-            <Text style={styles.infoText}>Total de Pedidos: {selectedCustomer.totalOrders}</Text>
           </View>
         </View>
       )}
@@ -56,7 +76,6 @@ const Customers = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: '#f9f9f9' },
-  header: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginVertical: 16 },
   customerItem: { padding: 16, backgroundColor: '#e0e0e0', borderRadius: 8, marginBottom: 8 },
   customerName: { fontSize: 16, fontWeight: 'bold' },
   detailsContainer: { alignItems: 'center', marginTop: 16 },
@@ -68,4 +87,3 @@ const styles = StyleSheet.create({
 });
 
 export default Customers;
-
