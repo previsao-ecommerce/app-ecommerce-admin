@@ -25,7 +25,7 @@ const Customers = () => {
     const fetchCustomers = async () => {
       try {
         const response = await axios.get(
-          "https://1f84-2804-1e68-800c-474a-c450-99a-142e-25f3.ngrok-free.app/user"
+          "https://7027-186-249-40-252.ngrok-free.app/user"
         );
 
         setCustomers(response.data);
