@@ -1,97 +1,109 @@
-// Dashboard.js
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, Button, ActivityIndicator } from 'react-native';
-import { BarChart } from 'react-native-chart-kit';
-import axios from 'axios';
-import { useNavigation } from '@react-navigation/native';
-
-const PUBLIC_KEY = 'pk_test_51QH88qGo50WW5CWAncc5sz3B4TF5fh02kq8uB4glKbpjTqgxNyM4iHEFKPXHLITv1A2xycH5cilnRdwF2xyYdyUW00PTiWUl2F';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  Button,
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import axios from "axios";
 
 const Dashboard = () => {
   const navigation = useNavigation();
-  const [payouts, setPayouts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState({});
+
+  const getData = async () => {
+    setLoading(true);
+    await axios
+      .get(
+        `https://1f84-2804-1e68-800c-474a-c450-99a-142e-25f3.ngrok-free.app/order/dashboard`
+      )
+      .then((res) => {
+        console.log("Response", res.data);
+        setData(res.data);
+      })
+      .catch((err) => {
+        console.log("Error", err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
+
+  console.log("Data", data);
 
   useEffect(() => {
-    const fetchPayouts = async () => {
-      try {
-        const response = await axios.get('https://api.stripe.com/v1/payouts', {
-          headers: {
-            Authorization: `Bearer ${PUBLIC_KEY}`,
-          },
-        });
-
-        const data = response.data.data.map((payout) => ({
-          id: payout.id,
-          amount: payout.amount / 100, // Convertendo para reais
-          arrival_date: new Date(payout.arrival_date * 1000).toLocaleDateString(),
-          created: new Date(payout.created * 1000).toLocaleDateString(),
-        }));
-
-        setPayouts(data);
-        setLoading(false);
-      } catch (error) {
-        console.error('Erro ao buscar dados da API Stripe:', error);
-        setLoading(false);
-      }
-    };
-
-    fetchPayouts();
+    getData();
   }, []);
 
   return (
-    <ScrollView style={styles.container}>
-      <Button title="Voltar para Home" onPress={() => navigation.navigate('Home')} />
-
-      <Text style={styles.chartTitle}>Resumo de Payouts</Text>
-
+    <View style={styles.container}>
       {loading ? (
         <ActivityIndicator size="large" color="#0000ff" />
-      ) : payouts.length > 0 ? (
-        <BarChart
-          data={{
-            labels: payouts.map((payout) => payout.arrival_date), // Datas de chegada
-            datasets: [{ data: payouts.map((payout) => payout.amount) }],
-          }}
-          width={Dimensions.get('window').width - 16}
-          height={220}
-          yAxisLabel="R$"
-          chartConfig={{
-            backgroundColor: '#e26a00',
-            backgroundGradientFrom: '#fb8c00',
-            backgroundGradientTo: '#ffa726',
-            decimalPlaces: 2,
-            color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-            labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-          }}
-          style={{ marginVertical: 8, borderRadius: 16 }}
-        />
       ) : (
-        <Text style={styles.errorText}>Nenhum dado de payout disponível.</Text>
-      )}
-
-      {/* Detalhes dos Payouts */}
-      <View>
-        {payouts.map((payout) => (
-          <View key={payout.id} style={styles.card}>
-            <Text style={styles.cardTitle}>ID: {payout.id}</Text>
-            <Text style={styles.cardText}>Valor: R$ {payout.amount.toFixed(2)}</Text>
-            <Text style={styles.cardText}>Data de Chegada: {payout.arrival_date}</Text>
-            <Text style={styles.cardText}>Criado em: {payout.created}</Text>
+        <View style={styles.infoContainer}>
+          <View style={styles.card}>
+            <Text style={styles.title}>Faturamento</Text>
+            <Text style={styles.value}>
+              R${" "}
+              {parseFloat(data?.totalValue).toLocaleString("pt-BR", {
+                minimumFractionDigits: 2,
+              })}
+            </Text>
           </View>
-        ))}
-      </View>
-    </ScrollView>
+
+          <View style={styles.card}>
+            <Text style={styles.title}>Vendas</Text>
+            <Text style={styles.value}>{data?.totalOrders} Vendas</Text>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.title}>Produtos Vendidos</Text>
+            <Text style={styles.value}>0 Produtos</Text>
+          </View>
+        </View>
+      )}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#f4f4f4' },
-  chartTitle: { fontSize: 18, fontWeight: 'bold', textAlign: 'center', marginVertical: 8 },
-  card: { backgroundColor: '#fff', padding: 16, borderRadius: 8, marginBottom: 16, elevation: 3 },
-  cardTitle: { fontSize: 18, fontWeight: 'bold' },
-  cardText: { fontSize: 16, marginTop: 4, color: '#333' },
-  errorText: { textAlign: 'center', color: 'red', fontSize: 16, marginVertical: 16 },
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: "#f4f4f4",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  infoContainer: {
+    width: "100%",
+    justifyContent: "space-between",
+  },
+  card: {
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+    alignItems: "center",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#4a4a4a",
+  },
+  value: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#6c5ce7",
+    marginTop: 8,
+  },
 });
 
 export default Dashboard;
